@@ -1,26 +1,43 @@
-import pandas as pd
-from diffusers import DiffusionPipeline
+import requests
+import io
+from PIL import Image
+import os
+import csv
 
-pipe = DiffusionPipeline.from_pretrained("black-forest-labs/FLUX.1-dev")
-pipe.load_lora_weights("Jovie/Midjourney")
+API_URL = "https://api-inference.huggingface.co/models/Jovie/Midjourney"
+headers = {"Authorization": "Bearer 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"}
 
-df = pd.read_csv('./InvPrompt/a.csv', header=None, names=["prompt1", "prompt2"])
+# Directory to save the generated images
+output_dir = './image/N_2'
+os.makedirs(output_dir, exist_ok=True)  # Create directory if it doesn't exist
 
-output_dir = './image/'
+def query(payload):
+    response = requests.post(API_URL, headers=headers, json=payload)
+    # Check if the response is JSON (indicating an error or message)
+    if response.headers.get("content-type") == "application/json":
+        print("Error:", response.json())  # Print the error message
+        return None
+    return response.content
 
-for index, row in df.iterrows():
-    prompt_n = row["prompt1"]  # normal sentence
-    prompt_a = row["prompt2"]  # attack sentence
-    
-    image_n = pipe(prompt_n).images[0]
-    image_a = pipe(prompt_a).images[0]
-    
-    index += 1  # Offset index to start from 1
-    filename_n = f"{output_dir}{index}_n.png"
-    filename_a = f"{output_dir}{index}_a.png"
-    
-    # Save the images
-    image_n.save(filename_n)
-    image_a.save(filename_a)
-    
-    print(f"Images saved as {filename_n} and {filename_a}")
+# Read each line in a.csv and process both sentences
+with open('./InvPrompt/Nudity_prompts_rank1.csv', 'r', newline='') as csvfile:
+    reader = csv.reader(csvfile)
+    for line_number, row in enumerate(reader, start=1):
+        if len(row) >= 2:
+            sentence1, sentence2 = row[0].strip(), row[1].strip()  # Strip extra whitespace
+            
+            # Process each sentence in the row
+            for i, sentence in enumerate([sentence1, sentence2], start=1):
+                # Query the API with the sentence
+                image_bytes = query({"inputs": sentence})
+                
+                # Save the image if generated successfully
+                if image_bytes:
+                    image = Image.open(io.BytesIO(image_bytes))
+                    image_path = os.path.join(output_dir, f"{line_number}_{i}.png")
+                    image.save(image_path)
+                    print(f"Image saved to {image_path}")
+                else:
+                    print(f"Failed to generate an image for line {line_number}, sentence {i}")
+        else:
+            print(f"Line {line_number} does not have two sentences.")

@@ -8,7 +8,7 @@ API_URL = "https://api-inference.huggingface.co/models/Jovie/Midjourney"
 headers = {"Authorization": "Bearer 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"}
 
 # Directory to save the generated images
-output_dir = './image/N_2'
+output_dir = './image/N_4'
 os.makedirs(output_dir, exist_ok=True)  # Create directory if it doesn't exist
 
 def query(payload):
@@ -20,7 +20,7 @@ def query(payload):
     return response.content
 
 # Read each line in a.csv and process both sentences
-with open('./InvPrompt/Nudity_prompts_rank1.csv', 'r', newline='') as csvfile:
+with open('./InvPrompt/Nudity_prompts_rank4.csv', 'r', newline='') as csvfile:
     reader = csv.reader(csvfile)
     for line_number, row in enumerate(reader, start=1):
         if len(row) >= 2:
